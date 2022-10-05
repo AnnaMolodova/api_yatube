@@ -1,27 +1,21 @@
-from posts.models import Comment, Group, Post
 from rest_framework import viewsets
 from rest_framework.generics import get_object_or_404
-from rest_framework.views import PermissionDenied
+from rest_framework.permissions import IsAuthenticated
 
+from .permissions import IsAuthorOrReadOnly
 from .serializers import CommentSerializer, GroupSerializer, PostSerializer
-
+from posts.models import Comment, Group, Post
 
 class PostViewSet(viewsets.ModelViewSet):
+    permission_classes = [
+        IsAuthorOrReadOnly, IsAuthenticated
+    ]
+
     queryset = Post.objects.all()
     serializer_class = PostSerializer
 
     def perform_create(self, serializer):
         serializer.save(author=self.request.user)
-
-    def perform_update(self, serializer):
-        if serializer.instance.author != self.request.user:
-            raise PermissionDenied('Изменение чужого контента запрещено')
-        super(PostViewSet, self).perform_update(serializer)
-
-    def perform_destroy(self, instance):
-        if instance.author != self.request.user:
-            raise PermissionDenied('Изменение чужого контента запрещено')
-        instance.delete()
 
 
 class GroupViewSet(viewsets.ReadOnlyModelViewSet):
@@ -30,6 +24,10 @@ class GroupViewSet(viewsets.ReadOnlyModelViewSet):
 
 
 class CommentViewSet(viewsets.ModelViewSet):
+    permission_classes = [
+        IsAuthorOrReadOnly, IsAuthenticated
+    ]
+
     serializer_class = CommentSerializer
 
     def perform_create(self, serializer):
@@ -41,13 +39,3 @@ class CommentViewSet(viewsets.ModelViewSet):
         post_id = self.kwargs.get('post_id')
         new_queryset = Comment.objects.filter(post=post_id)
         return new_queryset
-
-    def perform_update(self, serializer):
-        if serializer.instance.author != self.request.user:
-            raise PermissionDenied('Изменение чужого контента запрещено')
-        super(CommentViewSet, self).perform_update(serializer)
-
-    def perform_destroy(self, instance):
-        if instance.author != self.request.user:
-            raise PermissionDenied('Изменение чужого контента запрещено')
-        instance.delete()
